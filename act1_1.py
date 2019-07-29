@@ -1,11 +1,3 @@
-#######################################################################
-# Copyright (C)                                                       #
-# 2016-2018 Shangtong Zhang(zhangshangtong.cpp@gmail.com)             #
-# 2016 Kenta Shimada(hyperkentakun@gmail.com)                         #
-# Permission given to modify the code as long as you keep this        #
-# declaration at the top                                              #
-#######################################################################
-
 import numpy as np
 import matplotlib
 
@@ -97,7 +89,7 @@ def episode(q_value):
     return time
 
 
-def figure_6_3():
+def activity_1_1():
     q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 4))
     episode_limit = 500
 
@@ -139,5 +131,4 @@ def figure_6_3():
     print('Wind strength for each column:\n{}'.format([str(w) for w in WIND]))
 
 
-if __name__ == '__main__':
-    figure_6_3()
+activity_1_1()
