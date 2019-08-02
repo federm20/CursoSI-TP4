@@ -42,30 +42,32 @@ ACTIONS = [ACTION_UP, ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT,
            ACTION_LEFT_DOWN, ACTION_LEFT_UP, ACTION_RIGHT_DOWN, ACTION_RIGHT_UP]
 
 
+# viento aleatorio: np.random.choice(np.arange(WIND[j] + 1))
 def step(state, action):
     i, j = state
     if action == ACTION_UP:
-        return [max(i - 1 - WIND[j], 0), j]
+        return [max(i - 1 - np.random.choice(np.arange(WIND[j] + 1)), 0), j]
     elif action == ACTION_DOWN:
-        return [max(min(i + 1 - WIND[j], WORLD_HEIGHT - 1), 0), j]
+        return [max(min(i + 1 - np.random.choice(np.arange(WIND[j] + 1)), WORLD_HEIGHT - 1), 0), j]
     elif action == ACTION_LEFT:
-        return [max(i - WIND[j], 0), max(j - 1, 0)]
+        return [max(i - np.random.choice(np.arange(WIND[j] + 1)), 0), max(j - 1, 0)]
     elif action == ACTION_RIGHT:
-        return [max(i - WIND[j], 0), min(j + 1, WORLD_WIDTH - 1)]
+        return [max(i - np.random.choice(np.arange(WIND[j] + 1)), 0), min(j + 1, WORLD_WIDTH - 1)]
     elif action == ACTION_LEFT_DOWN:
-        return [max(min(i + 1 - WIND[j], WORLD_HEIGHT - 1), 0), max(j - 1, 0)]
+        return [max(min(i + 1 - np.random.choice(np.arange(WIND[j] + 1)), WORLD_HEIGHT - 1), 0), max(j - 1, 0)]
     elif action == ACTION_LEFT_UP:
-        return [max(i - 1 - WIND[j], 0), max(j - 1, 0)]
+        return [max(i - 1 - np.random.choice(np.arange(WIND[j] + 1)), 0), max(j - 1, 0)]
     elif action == ACTION_RIGHT_DOWN:
-        return [max(min(i + 1 - WIND[j], WORLD_HEIGHT - 1), 0), min(j + 1, WORLD_WIDTH - 1)]
+        return [max(min(i + 1 - np.random.choice(np.arange(WIND[j] + 1)), WORLD_HEIGHT - 1), 0),
+                min(j + 1, WORLD_WIDTH - 1)]
     elif action == ACTION_RIGHT_UP:
-        return [max(i - 1 - WIND[j], 0), min(j + 1, WORLD_WIDTH - 1)]
+        return [max(i - 1 - np.random.choice(np.arange(WIND[j] + 1)), 0), min(j + 1, WORLD_WIDTH - 1)]
     else:
         assert False
 
 
 # play for an episode
-def episode(q_value):
+def episode(q_value, sarsa=True):
     # track the total time steps in this episode
     time = 0
 
@@ -89,9 +91,15 @@ def episode(q_value):
             next_action = np.random.choice(
                 [action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
 
-        # Q-Learning update
-        q_value[state[0], state[1], action] += ALPHA * (
-                REWARD + GAMMA * np.max(q_value[next_state[0], next_state[1], :]) - q_value[state[0], state[1], action])
+        if sarsa:
+            # Sarsa update
+            q_value[state[0], state[1], action] += ALPHA * (
+                    REWARD + q_value[next_state[0], next_state[1], next_action] - q_value[state[0], state[1], action])
+        else:
+            # Q-Learning update
+            q_value[state[0], state[1], action] += ALPHA * (
+                    REWARD + GAMMA * np.max(q_value[next_state[0], next_state[1], :]) - q_value[
+                state[0], state[1], action])
 
         state = next_state
         action = next_action
@@ -99,7 +107,7 @@ def episode(q_value):
     return time
 
 
-def activity_1_2():
+def activity_1_3():
     q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 8))
     episode_limit = 500
 
@@ -149,4 +157,4 @@ def activity_1_2():
     print('Wind strength for each column:\n{}'.format([str(w) + ' ' for w in WIND]))
 
 
-activity_1_2()
+activity_1_3()
