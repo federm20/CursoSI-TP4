@@ -7,15 +7,20 @@ from GPyOpt.methods import BayesianOptimization
 
 
 class QLearningSolver:
-    def __init__(self, name, n_episodes=1000, alpha=0.1, epsilon=0.1, gamma=1.0):
+    def __init__(self, name, n_episodes=1000, alpha=0.1, epsilon=0.1, gamma=1.0, double=False):
         self.buckets = (1, 1, 6, 12,)  # down-scaling feature space to discrete range
         self.n_episodes = n_episodes  # training episodes
-        self.n_win_ticks = 200  # average ticks over 100 episodes required for win
+        self.n_win_ticks = 190  # average ticks over 100 episodes required for win
         self.alpha = alpha  # learning rate
         self.epsilon = epsilon  # exploration rate
         self.gamma = gamma  # discount factor
         self.env = gym.make(name)
-        self.Q = np.zeros(self.buckets + (self.env.action_space.n,))
+        self.Q1 = np.zeros(self.buckets + (self.env.action_space.n,))
+        self.double = double
+
+        # double Q-Learning
+        if self.double:
+            self.Q2 = np.zeros(self.buckets + (self.env.action_space.n,))
 
     def discretize(self, obs):
         upper_bounds = [self.env.observation_space.high[0], 0.5, self.env.observation_space.high[2], math.radians(50)]
@@ -26,11 +31,28 @@ class QLearningSolver:
         return tuple(new_obs)
 
     def choose_action(self, state, epsilon):
-        return self.env.action_space.sample() if (np.random.random() <= epsilon) else np.argmax(self.Q[state])
+        if not self.double:
+            return self.env.action_space.sample() if (np.random.random() <= epsilon) else np.argmax(self.Q1[state])
+        else:
+            return self.env.action_space.sample() if (np.random.random() <= epsilon) else np.argmax(
+                [item1 + item2 for item1, item2 in zip(self.Q1[state], self.Q2[state])])
 
     def update_q(self, state_old, action, reward, state_new, alpha):
-        self.Q[state_old][action] += alpha * (
-                reward + self.gamma * np.max(self.Q[state_new]) - self.Q[state_old][action])
+        if not self.double:
+            self.Q1[state_old][action] += alpha * (
+                    reward + self.gamma * np.max(self.Q1[state_new]) - self.Q1[state_old][action])
+        else:
+            if np.random.binomial(1, 0.5) == 1:
+                active_q = self.Q1
+                target_q = self.Q2
+            else:
+                active_q = self.Q2
+                target_q = self.Q1
+
+            best_action = np.random.choice([action_ for action_, value_ in enumerate(active_q[state_new]) if
+                                            value_ == np.max(active_q[state_new])])
+            active_q[state_old][action] += alpha * (
+                    reward + self.gamma * target_q[state_new][best_action] - active_q[state_old][action])
 
     def run(self):
         scores = deque(maxlen=100)
@@ -62,18 +84,17 @@ class QLearningSolver:
         return mean_score
 
 
-def activity_2_1():
-
+def activity_2_1(double=False, name='CartPole-v1'):
     def objective(params):
-        print(params)
-        solver = QLearningSolver('CartPole-v1', alpha=params[0][0], epsilon=params[0][1])
-        res = solver.run()
-        print(res)
-        return res
+        solver = QLearningSolver(name=name, double=double, alpha=params[0][0], epsilon=params[0][1])
+        return solver.run()
+
+    # objective([[0.3, 0.25]])
 
     bds = [
-        {'name': 'alpha', 'type': 'continuous', 'domain': (0, 1)},
-        {'name': 'epsilon', 'type': 'continuous', 'domain': (0, 1)}
+        {'name': 'alpha', 'type': 'discrete', 'domain': np.arange(0.05, 0.4, 0.05)},
+        {'name': 'epsilon', 'type': 'discrete', 'domain': np.arange(0.05, 0.4, 0.05)}
+        # {'name': 'gamma', 'type': 'discrete', 'domain': np.arange(0.5, 1, 0.05)}
     ]
 
     # define el optimizador
@@ -86,11 +107,30 @@ def activity_2_1():
                                      maximize=True)
 
     # realiza las 20 iteraciones de la optimizacion
-    optimizer.run_optimization(max_iter=5)
+    optimizer.run_optimization(max_iter=30)
 
+    print(optimizer.X)
     print(optimizer.Y)
 
-    plt.contour(optimizer.X[:, 0], optimizer.X[:, 0], optimizer.Y)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    xx = optimizer.X[:, 0].reshape(len(optimizer.X[:, 0]), 1).reshape(-1)
+    yy = optimizer.X[:, 1].reshape(len(optimizer.X[:, 1]), 1).reshape(-1)
+    zz = -optimizer.Y.reshape(-1)
+
+    surf = ax.plot_trisurf(xx, yy, zz, cmap='viridis')
+    fig.colorbar(surf)
+    plt.xlabel('Alpha')
+    plt.ylabel('Epsilon')
+    plt.title('Cart Pole V1 Optimization')
+    plt.show()
+
+
+
+def activity_2_2():
+    activity_2_1(double=True)
 
 
 activity_2_1()
+# activity_2_2()
