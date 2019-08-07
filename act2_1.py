@@ -6,15 +6,15 @@ from collections import deque
 from GPyOpt.methods import BayesianOptimization
 
 
-class QLearningSolver:
-    def __init__(self, name, n_episodes=1000, alpha=0.1, epsilon=0.1, gamma=1.0, double=False):
+class CartPoleSolver:
+    def __init__(self, n_episodes=1000, alpha=0.1, epsilon=0.1, gamma=1.0, double=False):
         self.buckets = (1, 1, 6, 12,)  # down-scaling feature space to discrete range
         self.n_episodes = n_episodes  # training episodes
         self.n_win_ticks = 190  # average ticks over 100 episodes required for win
         self.alpha = alpha  # learning rate
         self.epsilon = epsilon  # exploration rate
         self.gamma = gamma  # discount factor
-        self.env = gym.make(name)
+        self.env = gym.make('CartPole-v1')
         self.Q1 = np.zeros(self.buckets + (self.env.action_space.n,))
         self.double = double
 
@@ -56,15 +56,15 @@ class QLearningSolver:
 
     def run(self):
         scores = deque(maxlen=100)
+        # total_scores = []
 
         for e in range(self.n_episodes):
             current_state = self.discretize(self.env.reset())
-
             done = False
             i = 0
 
             while not done:
-                # self.env.render()
+                self.env.render()
                 action = self.choose_action(current_state, self.epsilon)
                 obs, reward, done, _ = self.env.step(action)
                 new_state = self.discretize(obs)
@@ -74,6 +74,7 @@ class QLearningSolver:
 
             scores.append(i)
             mean_score = np.mean(scores)
+            # total_scores.append(mean_score)
             if mean_score >= self.n_win_ticks and e >= 100:
                 print('Ran {} episodes. Solved after {} trials ✔'.format(e, e - 100))
                 return mean_score
@@ -81,50 +82,54 @@ class QLearningSolver:
                 print('[Episode {}] - Mean survival time over last 100 episodes was {} ticks.'.format(e, mean_score))
 
         print('Did not solve after {} episodes 😞'.format(e))
+
+        # plt.plot(range(1000), total_scores)
+        # plt.show()
+
         return mean_score
 
 
-def activity_2_1(double=False, name='CartPole-v1'):
+def activity_2_1(double=False):
     def objective(params):
-        solver = QLearningSolver(name=name, double=double, alpha=params[0][0], epsilon=params[0][1])
+        solver = CartPoleSolver(double=double, alpha=params[0][0], epsilon=params[0][1])
         return solver.run()
 
-    # objective([[0.3, 0.25]])
+    objective([[0.3, 0.275]])
 
-    bds = [
-        {'name': 'alpha', 'type': 'discrete', 'domain': np.arange(0.05, 0.4, 0.05)},
-        {'name': 'epsilon', 'type': 'discrete', 'domain': np.arange(0.05, 0.4, 0.05)}
-        # {'name': 'gamma', 'type': 'discrete', 'domain': np.arange(0.5, 1, 0.05)}
-    ]
-
-    # define el optimizador
-    optimizer = BayesianOptimization(f=objective,
-                                     domain=bds,
-                                     model_type='GP',
-                                     acquisition_type='EI',
-                                     acquisition_jitter=0.05,
-                                     verbosity=True,
-                                     maximize=True)
-
-    # realiza las 20 iteraciones de la optimizacion
-    optimizer.run_optimization(max_iter=30)
-
-    print(optimizer.X)
-    print(optimizer.Y)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    xx = optimizer.X[:, 0].reshape(len(optimizer.X[:, 0]), 1).reshape(-1)
-    yy = optimizer.X[:, 1].reshape(len(optimizer.X[:, 1]), 1).reshape(-1)
-    zz = -optimizer.Y.reshape(-1)
-
-    surf = ax.plot_trisurf(xx, yy, zz, cmap='viridis')
-    fig.colorbar(surf)
-    plt.xlabel('Alpha')
-    plt.ylabel('Epsilon')
-    plt.title('Cart Pole V1 Optimization')
-    plt.show()
+    # bds = [
+    #     {'name': 'alpha', 'type': 'discrete', 'domain': np.arange(0.05, 0.4, 0.05)},
+    #     {'name': 'epsilon', 'type': 'discrete', 'domain': np.arange(0.05, 0.4, 0.05)}
+    #     # {'name': 'gamma', 'type': 'discrete', 'domain': np.arange(0.5, 1, 0.05)}
+    # ]
+    #
+    # # define el optimizador
+    # optimizer = BayesianOptimization(f=objective,
+    #                                  domain=bds,
+    #                                  model_type='GP',
+    #                                  acquisition_type='EI',
+    #                                  acquisition_jitter=0.05,
+    #                                  verbosity=True,
+    #                                  maximize=True)
+    #
+    # # realiza las 20 iteraciones de la optimizacion
+    # optimizer.run_optimization(max_iter=30)
+    #
+    # print(optimizer.X)
+    # print(optimizer.Y)
+    #
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    #
+    # xx = optimizer.X[:, 0].reshape(len(optimizer.X[:, 0]), 1).reshape(-1)
+    # yy = optimizer.X[:, 1].reshape(len(optimizer.X[:, 1]), 1).reshape(-1)
+    # zz = -optimizer.Y.reshape(-1)
+    #
+    # surf = ax.plot_trisurf(xx, yy, zz, cmap='viridis')
+    # fig.colorbar(surf)
+    # plt.xlabel('Alpha')
+    # plt.ylabel('Epsilon')
+    # plt.title('Cart Pole V1 Optimization')
+    # plt.show()
 
 
 
