@@ -8,31 +8,40 @@ from GPyOpt.methods import BayesianOptimization
 
 class MountainCarSolver:
     def __init__(self, n_episodes=1000, alpha=0.1, epsilon=0.1, gamma=1.0, double=False):
+        self.buckets = (18, 15,)
         self.n_episodes = n_episodes  # training episodes
         self.n_win_ticks = 190  # average ticks over 100 episodes required for win
         self.alpha = alpha  # learning rate
         self.epsilon = epsilon  # exploration rate
         self.gamma = gamma  # discount factor
-        self.env = gym.make('CartPole-v1')
-        # self.Q1 = np.zeros(self.buckets + (self.env.action_space.n,))
+        self.env = gym.make('MountainCarContinuous-v0')
+        self.Q1 = np.zeros((18, 15, 2, 1))
         self.double = double
 
         # double Q-Learning
-        # if self.double:
-        #     self.Q2 = np.zeros(self.buckets + (self.env.action_space.n,))
+        if self.double:
+            self.Q2 = np.zeros((18, 15, 2, 1))
 
     def discretize(self, obs):
-        state_adj = (obs - self.env.observation_space.low)*np.array([10, 100])
-        state_adj = np.round(state_adj, 0).astype(int)
-        print(state_adj)
-        return state_adj
+        # return tuple([np.around(obs[0], 1), np.around(obs[1], 2)])
+
+        upper_bounds = [self.env.observation_space.high[0], self.env.observation_space.high[1]]
+        lower_bounds = [self.env.observation_space.low[0], self.env.observation_space.low[1]]
+        ratios = [(obs[i] + abs(lower_bounds[i])) / (upper_bounds[i] - lower_bounds[i]) for i in range(len(obs))]
+        new_obs = [int(round((self.buckets[i] - 1) * ratios[i])) for i in range(len(obs))]
+        new_obs = [min(self.buckets[i] - 1, max(0, new_obs[i])) for i in range(len(obs))]
+        return tuple(new_obs)
+
+    def discretize_action(self, action):
+        return [0] if action < 0 else [1]
 
     def choose_action(self, state, epsilon):
         if not self.double:
-            return self.env.action_space.sample() if (np.random.random() <= epsilon) else np.argmax(self.Q1[state])
+            return self.discretize_action(self.env.action_space.sample()) if (np.random.random() <= epsilon) \
+                else [np.argmax(self.Q1[state])]
         else:
-            return self.env.action_space.sample() if (np.random.random() <= epsilon) else np.argmax(
-                [item1 + item2 for item1, item2 in zip(self.Q1[state], self.Q2[state])])
+            return self.discretize_action(self.env.action_space.sample()) if (np.random.random() <= epsilon) \
+                else [np.argmax([item1 + item2 for item1, item2 in zip(self.Q1[state], self.Q2[state])])]
 
     def update_q(self, state_old, action, reward, state_new, alpha):
         if not self.double:
@@ -52,8 +61,8 @@ class MountainCarSolver:
                     reward + self.gamma * target_q[state_new][best_action] - active_q[state_old][action])
 
     def run(self):
-        scores = deque(maxlen=100)
-        # total_scores = []
+        total_scores = []
+        scores = deque(maxlen=10)
 
         for e in range(self.n_episodes):
             current_state = self.discretize(self.env.reset())
@@ -64,7 +73,7 @@ class MountainCarSolver:
             while not done:
                 # self.env.render()
                 action = self.choose_action(current_state, self.epsilon)
-                obs, reward, done, _ = self.env.step(action)
+                obs, reward, done, _ = self.env.step([-1] if action[0] == 0 else [1])
                 new_state = self.discretize(obs)
                 self.update_q(current_state, action, reward, new_state, self.alpha)
                 current_state = new_state
@@ -72,17 +81,17 @@ class MountainCarSolver:
 
             scores.append(i)
             mean_score = np.mean(scores)
-            # total_scores.append(mean_score)
-            if mean_score >= self.n_win_ticks and e >= 100:
-                print('Ran {} episodes. Solved after {} trials ✔'.format(e, e - 100))
-                return mean_score
-            if e % 100 == 0:
-                print('[Episode {}] - Mean survival time over last 100 episodes was {} ticks.'.format(e, mean_score))
+            total_scores.append(mean_score)
+        #     if mean_score >= self.n_win_ticks and e >= 100:
+        #         print('Ran {} episodes. Solved after {} trials ✔'.format(e, e - 100))
+        #         return mean_score
+        #     if e % 100 == 0:
+        #         print('[Episode {}] - Mean survival time over last 100 episodes was {} ticks.'.format(e, mean_score))
+        #
+        # print('Did not solve after {} episodes 😞'.format(e))
 
-        print('Did not solve after {} episodes 😞'.format(e))
-
-        # plt.plot(range(1000), total_scores)
-        # plt.show()
+        plt.plot(range(self.n_episodes), total_scores)
+        plt.show()
 
         return mean_score
 
@@ -128,7 +137,6 @@ def activity_2_3_a(double=False):
     # plt.ylabel('Epsilon')
     # plt.title('Cart Pole V1 Optimization')
     # plt.show()
-
 
 
 def activity_2_3_b():
