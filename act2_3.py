@@ -10,7 +10,6 @@ class MountainCarSolver:
     def __init__(self, n_episodes=1000, alpha=0.1, epsilon=0.1, gamma=1.0, double=False):
         self.buckets = (18, 15,)
         self.n_episodes = n_episodes  # training episodes
-        self.n_win_ticks = 190  # average ticks over 100 episodes required for win
         self.alpha = alpha  # learning rate
         self.epsilon = epsilon  # exploration rate
         self.gamma = gamma  # discount factor
@@ -23,8 +22,6 @@ class MountainCarSolver:
             self.Q2 = np.zeros((18, 15, 2, 1))
 
     def discretize(self, obs):
-        # return tuple([np.around(obs[0], 1), np.around(obs[1], 2)])
-
         upper_bounds = [self.env.observation_space.high[0], self.env.observation_space.high[1]]
         lower_bounds = [self.env.observation_space.low[0], self.env.observation_space.low[1]]
         ratios = [(obs[i] + abs(lower_bounds[i])) / (upper_bounds[i] - lower_bounds[i]) for i in range(len(obs))]
@@ -61,39 +58,34 @@ class MountainCarSolver:
                     reward + self.gamma * target_q[state_new][best_action] - active_q[state_old][action])
 
     def run(self):
-        total_scores = []
-        scores = deque(maxlen=10)
+        total_rewards = []
 
         for e in range(self.n_episodes):
             current_state = self.discretize(self.env.reset())
 
             done = False
-            i = 0
+            sum_reward = 0
 
             while not done:
-                # self.env.render()
+                self.env.render()
                 action = self.choose_action(current_state, self.epsilon)
                 obs, reward, done, _ = self.env.step([-1] if action[0] == 0 else [1])
+                sum_reward += reward
                 new_state = self.discretize(obs)
                 self.update_q(current_state, action, reward, new_state, self.alpha)
                 current_state = new_state
-                i += 1
 
-            scores.append(i)
-            mean_score = np.mean(scores)
-            total_scores.append(mean_score)
-        #     if mean_score >= self.n_win_ticks and e >= 100:
-        #         print('Ran {} episodes. Solved after {} trials ✔'.format(e, e - 100))
-        #         return mean_score
-        #     if e % 100 == 0:
-        #         print('[Episode {}] - Mean survival time over last 100 episodes was {} ticks.'.format(e, mean_score))
-        #
-        # print('Did not solve after {} episodes 😞'.format(e))
+            # if sum_reward > 90:
+            #     return sum_reward
 
-        plt.plot(range(self.n_episodes), total_scores)
+            total_rewards.append(max(sum_reward, -1000 if len(total_rewards) == 0 else np.max(total_rewards)))
+            # print(np.argmax(total_rewards), np.max(total_rewards))
+
+
+        plt.plot(range(self.n_episodes), total_rewards)
         plt.show()
 
-        return mean_score
+        return max(total_rewards)
 
 
 def activity_2_3_a(double=False):
@@ -101,8 +93,8 @@ def activity_2_3_a(double=False):
         solver = MountainCarSolver(double=double, alpha=params[0][0], epsilon=params[0][1])
         return solver.run()
 
-    objective([[0.3, 0.275]])
-
+    objective([[0.15, 0.15]])
+    #
     # bds = [
     #     {'name': 'alpha', 'type': 'discrete', 'domain': np.arange(0.05, 0.4, 0.05)},
     #     {'name': 'epsilon', 'type': 'discrete', 'domain': np.arange(0.05, 0.4, 0.05)}
@@ -135,13 +127,13 @@ def activity_2_3_a(double=False):
     # fig.colorbar(surf)
     # plt.xlabel('Alpha')
     # plt.ylabel('Epsilon')
-    # plt.title('Cart Pole V1 Optimization')
-    # plt.show()
+    # plt.title('MountainCarContinuos V0 Optimization')
+    plt.show()
 
 
 def activity_2_3_b():
     activity_2_3_a(double=True)
 
 
-activity_2_3_a()
-# activity_2_3_b()
+# activity_2_3_a()
+activity_2_3_b()
