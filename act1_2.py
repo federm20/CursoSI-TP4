@@ -111,6 +111,8 @@ def activity_1_2():
 
     steps = np.add.accumulate(steps)
 
+    show_policy(q_value)
+
     plt.plot(steps, np.arange(1, len(steps) + 1))
     plt.xlabel('Time steps')
     plt.ylabel('Episodes')
@@ -118,6 +120,8 @@ def activity_1_2():
     plt.savefig('images/figure_6_3.png')
     plt.close()
 
+
+def show_policy(q_value):
     # display the optimal policy
     optimal_policy = []
     for i in range(0, WORLD_HEIGHT):

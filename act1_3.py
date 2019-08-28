@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib
+from collections import deque
 
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # world height
@@ -108,24 +109,33 @@ def episode(q_value, sarsa=True):
 
 
 def activity_1_3():
-    q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 8))
-    episode_limit = 500
+    results = []
 
-    steps = []
-    ep = 0
-    while ep < episode_limit:
-        steps.append(episode(q_value))
-        ep += 1
+    for e in range(2):
+        avg = deque(maxlen=20)
+        q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 8))
+        episode_limit = 500
 
-    steps = np.add.accumulate(steps)
+        steps = []
+        ep = 0
+        while ep < episode_limit:
+            current_step = episode(q_value, e == 1)
+            avg.append(current_step)
+            steps.append(np.round(np.mean(avg)))
+            ep += 1
 
-    plt.plot(steps, np.arange(1, len(steps) + 1))
-    plt.xlabel('Time steps')
-    plt.ylabel('Episodes')
+        show_policy(q_value)
+        results.append(steps)
 
-    plt.savefig('images/figure_6_3.png')
-    plt.close()
+    plt.plot(np.arange(1, len(steps) + 1), results[0], color='red')
+    plt.plot(np.arange(1, len(steps) + 1), results[1], color='blue')
+    plt.legend(['Q-Learning', 'Sarsa(0)'])
+    plt.xlabel('Episodes')
+    plt.ylabel('Time steps')
+    plt.show()
 
+
+def show_policy(q_value):
     # display the optimal policy
     optimal_policy = []
     for i in range(0, WORLD_HEIGHT):
