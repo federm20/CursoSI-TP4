@@ -24,17 +24,14 @@ class MountainCarSolver:
         new_obs = [min(self.buckets[i] - 1, max(0, new_obs[i])) for i in range(len(obs))]
         return tuple(new_obs)
 
-
     def discretize_action(self, action):
         return [0] if action < 0 else [1]
 
+    def hedger_prediction(self, query_point, bandwidth):
+        return
 
-    def hedger_prediction(query_point, h):
-        self.
-
-
-    def hedger_trainig():
-
+    def hedger_trainig(self):
+        return
 
 
 def activity_3(double=False):

@@ -1,11 +1,3 @@
-#######################################################################
-# Copyright (C)                                                       #
-# 2016-2018 Shangtong Zhang(zhangshangtong.cpp@gmail.com)             #
-# 2016 Kenta Shimada(hyperkentakun@gmail.com)                         #
-# Permission given to modify the code as long as you keep this        #
-# declaration at the top                                              #
-#######################################################################
-
 import numpy as np
 import matplotlib
 
@@ -17,7 +9,6 @@ from math import floor
 
 
 class IHT:
-    """Structure to handle collisions"""
 
     def __init__(self, size_val):
         self.size = size_val
@@ -107,11 +98,6 @@ def step(position, velocity, action):
 
 # wrapper class for state action value function
 class ValueFunction:
-    # In this example I use the tiling software instead of implementing standard tiling by myself
-    # One important thing is that tiling is only a map from (state, action) to a series of indices
-    # It doesn't matter whether the indices have meaning, only if this map satisfy some property
-    # View the following webpage for more information
-    # http://incompleteideas.net/sutton/tiles/tiles3.html
     # @max_size: the maximum # of indices
     def __init__(self, step_size, num_of_tilings=8, max_size=2048):
         self.max_size = max_size
@@ -261,8 +247,7 @@ def print_cost(value_function, episode, ax):
     ax.set_title('Episode %d' % (episode + 1))
 
 
-# Figure 10.1, cost to go in a single run
-def figure_10_1():
+def activity_3_a():
     episodes = 9000
     plot_episodes = [0, 99, episodes - 1]
     fig = plt.figure(figsize=(40, 10))
@@ -275,8 +260,37 @@ def figure_10_1():
         if ep in plot_episodes:
             print_cost(value_function, ep, axes[plot_episodes.index(ep)])
 
-    plt.savefig('images/figure_10_1.png')
+    plt.savefig('images/activity_3.png')
     plt.close()
 
 
-figure_10_1()
+# Figure 10.2, semi-gradient Sarsa with different alphas
+def activity_3_b():
+    runs = 10
+    episodes = 500
+    num_of_tilings = 8
+    alphas = [0.1, 0.2, 0.5]
+
+    steps = np.zeros((len(alphas), episodes))
+    for run in range(runs):
+        value_functions = [ValueFunction(alpha, num_of_tilings) for alpha in alphas]
+        for index in range(len(value_functions)):
+            for episode in tqdm(range(episodes)):
+                step = semi_gradient_n_step_sarsa(value_functions[index])
+                steps[index, episode] += step
+
+    steps /= runs
+
+    for i in range(0, len(alphas)):
+        plt.plot(steps[i], label='alpha = '+str(alphas[i])+'/'+str(num_of_tilings))
+    plt.xlabel('Episode')
+    plt.ylabel('Steps per episode')
+    plt.yscale('log')
+    plt.legend()
+
+    plt.savefig('images/figure_10_2.png')
+    plt.close()
+
+
+# activity_3_a()
+activity_3_b()
